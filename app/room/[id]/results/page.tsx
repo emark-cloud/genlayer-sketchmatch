@@ -15,11 +15,16 @@ export default function ResultsPage() {
   const [evaluated, setEvaluated] = useState(false);
 
   async function evaluate() {
+  try {
     const res = await client.action("sketchmatch", "evaluate_round", {});
     console.log("Evaluation result:", res);
-    fetchResults();
-    setEvaluated(true);
+  } catch (err) {
+    console.error("Evaluation error:", err);
   }
+
+  await fetchResults();
+}
+
 
   async function fetchResults() {
     const data = await client.view("sketchmatch", "get_leaderboard", {});
