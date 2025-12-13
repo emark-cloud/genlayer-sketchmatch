@@ -16,17 +16,21 @@ export default function DrawPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   async function handleSubmit(dataUrl: string) {
-    if (isSubmitted) return;
+  if (isSubmitted) return;
 
-    setIsSubmitted(true);
+  setIsSubmitted(true);
 
+  try {
     await client.action("sketchmatch", "submit_drawing", {
-      player: account || "anonymous",
+      player: account || "anon-" + Math.random().toString(36).substring(2, 6),
       base64_img: dataUrl,
     });
-
-    router.push(`/room/${id}/results`);
+  } catch (err) {
+    console.error("Submission failed:", err);
   }
+
+  router.push(`/room/${id}/results`);
+}
 
   return (
     <main className="p-6 max-w-2xl mx-auto">
