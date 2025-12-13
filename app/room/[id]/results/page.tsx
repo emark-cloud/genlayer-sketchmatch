@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useGenLayer } from "@/hooks/useGenLayer";
 import { useRoomStore } from "@/lib/store";
+import Leaderboard from "@/components/Leaderboard";
 
 export default function ResultsPage() {
   const { id } = useParams();
@@ -11,29 +12,33 @@ export default function ResultsPage() {
   const client = useGenLayer();
   const { isHost } = useRoomStore();
 
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
   const [evaluated, setEvaluated] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  async function evaluate() {
-  try {
-    const res = await client.action("sketchmatch", "evaluate_round", {});
-    console.log("Evaluation result:", res);
-  } catch (err) {
-    console.error("Evaluation error:", err);
+  async function evaluateRound() {
+    setLoading(true);
+    try {
+      await client.action("sketchmatch", "evaluate_round", {});
+    } catch (err) {
+      console.error("Evaluation failed:", err);
+    }
+    await fetchLeaderboard();
+    setLoading(false);
   }
 
-  await fetchResults();
-}
-
-
-  async function fetchResults() {
-    const data = await client.view("sketchmatch", "get_leaderboard", {});
-    setLeaderboard(data.leaderboard);
-    setEvaluated(data.evaluated);
+  async function fetchLeaderboard() {
+    try {
+      const data = await client.view("sketchmatch", "get_leaderboard", {});
+      setLeaderboard(data.leaderboard);
+      setEvaluated(data.evaluated);
+    } catch (err) {
+      console.error("Error fetching leaderboard:", err);
+    }
   }
 
   useEffect(() => {
-    fetchResults();
+    fetchLeaderboard();
   }, []);
 
   return (
@@ -42,26 +47,15 @@ export default function ResultsPage() {
 
       {!evaluated && isHost && (
         <button
-          onClick={evaluate}
+          onClick={evaluateRound}
+          disabled={loading}
           className="bg-blue-600 text-white w-full py-3 rounded-lg mb-4"
         >
-          Evaluate Round
+          {loading ? "Evaluating..." : "Evaluate Round"}
         </button>
       )}
 
-      <ul className="space-y-3">
-        {leaderboard.map(([player, score], index) => (
-          <li
-            key={player}
-            className="flex justify-between bg-gray-100 p-3 rounded"
-          >
-            <span>
-              {index + 1}. {player}
-            </span>
-            <span>{score} pts</span>
-          </li>
-        ))}
-      </ul>
+      <Leaderboard leaderboard={leaderboard} />
 
       <button
         onClick={() => router.push("/")}
