@@ -1,13 +1,41 @@
-import { GenLayerClient } from "genlayer";
+export class GenLayerClient {
+  apiKey: string;
 
-export function createGenLayerClient() {
-  const apiKey = process.env.NEXT_PUBLIC_GENLAYER_API_KEY || "";
-
-  if (!apiKey) {
-    console.warn("⚠️ Warning: GenLayer API key missing.");
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
   }
 
-  return new GenLayerClient({
-    apiKey,
-  });
+  async action(contract: string, action: string, args: any) {
+    const res = await fetch("https://api.genlayer.com/v1/action", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": this.apiKey,
+      },
+      body: JSON.stringify({
+        contract,
+        action,
+        args,
+      }),
+    });
+
+    return await res.json();
+  }
+
+  async view(contract: string, view: string, args: any) {
+    const res = await fetch("https://api.genlayer.com/v1/view", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": this.apiKey,
+      },
+      body: JSON.stringify({
+        contract,
+        view,
+        args,
+      }),
+    });
+
+    return await res.json();
+  }
 }
