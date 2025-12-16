@@ -1,9 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import DrawingCanvas from "@/components/DrawingCanvas";
-import Timer from "@/components/Timer";
 import { useWallet } from "@/hooks/useWallet";
 import { useGenLayer } from "@/hooks/useGenLayer";
 
@@ -14,44 +13,42 @@ export default function DrawPage() {
   const client = useGenLayer();
 
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [prompt, setPrompt] = useState("Loading prompt...");
-
-  useEffect(() => {
-    async function loadPrompt() {
-      try {
-        const res = await client.view("sketchmatch", "get_prompt", {});
-        setPrompt(res.prompt);
-      } catch {
-        setPrompt("Draw something creative!");
-      }
-    }
-
-    loadPrompt();
-  }, []);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(dataUrl: string) {
-    if (isSubmitted) return;
-    setIsSubmitted(true);
+    if (isSubmitted || isSubmitting) return;
 
-    await client.action("sketchmatch", "submit_drawing", {
-      player: account || "anon-" + Math.random().toString(36).substring(2, 6),
-      base64_img: dataUrl,
-    });
+    if (!dataUrl.startsWith("data:image")) {
+      alert("Invalid drawing. Please try again.");
+      return;
+    }
 
-    router.push(`/room/${id}/results`);
+    setIsSubmitting(true);
+
+    try {
+      await client.action("sketchmatch", "submit_drawing", {
+        player:
+          account || "anon-" + Math.random().toString(36).slice(2, 6),
+        base64_img: dataUrl,
+      });
+
+      setIsSubmitted(true);
+      router.push(`/room/${id}/results`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit drawing. Please try again.");
+      setIsSubmitting(false);
+    }
   }
 
   return (
     <main className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-xl font-bold mb-2">Prompt</h1>
+      <h1 className="text-2xl font-bold mb-4">Draw your submission</h1>
 
-      <p className="bg-yellow-100 border border-yellow-300 p-4 rounded mb-4">
-        {prompt}
-      </p>
-
-      <Timer seconds={60} onComplete={() => handleSubmit("AUTO")} />
-
-      <DrawingCanvas onSubmit={handleSubmit} disabled={isSubmitted} />
+      <DrawingCanvas
+        onSubmit={handleSubmit}
+        disabled={isSubmitted || isSubmitting}
+      />
     </main>
   );
 }
