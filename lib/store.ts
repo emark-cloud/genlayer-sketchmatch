@@ -5,16 +5,14 @@ import { create } from "zustand";
 interface RoomState {
   roomId: string | null;
   players: string[];
-  readyPlayers: string[];
   selfName: string | null;
   isHost: boolean;
-  drawings: Record<string, string>; // player -> base64
+  drawings: Record<string, string>;
   roundEvaluated: boolean;
 
   setRoom: (id: string) => void;
   addPlayer: (name: string) => void;
-  setReady: () => void;
-  setHost: () => void;
+  resetRoom: () => void;
   saveDrawing: (player: string, img: string) => void;
   setRoundEvaluated: () => void;
 }
@@ -22,7 +20,6 @@ interface RoomState {
 export const useRoomStore = create<RoomState>((set, get) => ({
   roomId: null,
   players: [],
-  readyPlayers: [],
   selfName: null,
   isHost: false,
   drawings: {},
@@ -44,26 +41,23 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     });
   },
 
-  setReady: () => {
-    const { selfName, readyPlayers } = get();
-    if (!selfName) return;
-
-    if (!readyPlayers.includes(selfName)) {
-      set({ readyPlayers: [...readyPlayers, selfName] });
-    }
-  },
-
-  setHost: () => set({ isHost: true }),
-
-  saveDrawing: (player, img) => {
-    const { drawings } = get();
+  resetRoom: () =>
     set({
+      roomId: null,
+      players: [],
+      selfName: null,
+      isHost: false,
+      drawings: {},
+      roundEvaluated: false,
+    }),
+
+  saveDrawing: (player, img) =>
+    set((state) => ({
       drawings: {
-        ...drawings,
+        ...state.drawings,
         [player]: img,
       },
-    });
-  },
+    })),
 
   setRoundEvaluated: () => set({ roundEvaluated: true }),
 }));
