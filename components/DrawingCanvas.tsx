@@ -1,103 +1,81 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef } from "react";
 
-interface DrawingCanvasProps {
+interface Props {
   onSubmit: (dataUrl: string) => void;
   disabled?: boolean;
 }
 
-export default function DrawingCanvas({ onSubmit, disabled }: DrawingCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+export default function DrawingCanvas({ onSubmit, disabled }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing = useRef(false);
 
-  const [isDrawing, setIsDrawing] = useState(false);
+  function getCtx() {
+    return canvasRef.current?.getContext("2d");
+  }
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  function startDraw(e: React.MouseEvent) {
+    if (disabled) return;
+    drawing.current = true;
+    draw(e);
+  }
 
-    canvas.width = 600;
-    canvas.height = 400;
+  function endDraw() {
+    drawing.current = false;
+  }
 
-    const ctx = canvas.getContext("2d");
+  function draw(e: React.MouseEvent) {
+    if (!drawing.current || disabled) return;
+
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = getCtx();
     if (!ctx) return;
 
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
     ctx.lineWidth = 4;
+    ctx.lineCap = "round";
     ctx.strokeStyle = "#000";
 
-    ctxRef.current = ctx;
-  }, []);
-
-  function startDrawing(e: any) {
-    if (disabled) return;
-    setIsDrawing(true);
-    const { offsetX, offsetY } = e.nativeEvent;
-    ctxRef.current?.beginPath();
-    ctxRef.current?.moveTo(offsetX, offsetY);
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
   }
 
-  function draw(e: any) {
-    if (!isDrawing || disabled) return;
-    const { offsetX, offsetY } = e.nativeEvent;
-    ctxRef.current?.lineTo(offsetX, offsetY);
-    ctxRef.current?.stroke();
-  }
+  function handleSubmit() {
+    if (!canvasRef.current) return;
 
-  function stopDrawing() {
-    setIsDrawing(false);
-    ctxRef.current?.closePath();
-  }
+    const dataUrl = canvasRef.current.toDataURL("image/png");
 
-  function clearCanvas() {
-    const canvas = canvasRef.current;
-    const ctx = ctxRef.current;
-    if (!canvas || !ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
+    // 🔒 Prevent empty submissions
+    if (!dataUrl || dataUrl.length < 100) {
+      alert("Please draw something before submitting.");
+      return;
+    }
 
-  function submit() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL("image/png");
     onSubmit(dataUrl);
   }
 
   return (
-    <div className="mt-6">
+    <div className="space-y-4">
       <canvas
         ref={canvasRef}
-        className={`border rounded shadow-md bg-white ${
-          disabled ? "opacity-50" : ""
-        }`}
-        onMouseDown={startDrawing}
+        width={500}
+        height={400}
+        className="border bg-white cursor-crosshair"
+        onMouseDown={startDraw}
+        onMouseUp={endDraw}
         onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        onTouchStart={(e) => startDrawing(e)}
-        onTouchMove={(e) => draw(e)}
-        onTouchEnd={stopDrawing}
       />
 
-      <div className="flex gap-4 mt-4">
-        <button
-          onClick={clearCanvas}
-          disabled={disabled}
-          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-        >
-          Clear
-        </button>
-
-        <button
-          onClick={submit}
-          disabled={disabled}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          Submit Drawing
-        </button>
-      </div>
+      <button
+        onClick={handleSubmit}
+        disabled={disabled}
+        className="w-full py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+      >
+        Submit Drawing
+      </button>
     </div>
   );
 }
